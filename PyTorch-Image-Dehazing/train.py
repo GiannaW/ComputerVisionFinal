@@ -30,6 +30,8 @@ def train(config):
 	dehaze_net = net.dehaze_net().cuda()
 	dehaze_net.apply(weights_init)
 
+	
+	#---------------CHANGES DONE HERE AS I USED DIFFERENT DATASETS----------
 	# train_dataset = dataloader.dehazing_loader("content/drive/MyDrive/PyTorch-Image-Dehazing/data/data",
 	# 										 "content/drive/MyDrive/PyTorch-Image-Dehazing/data/images")		
 	# val_dataset = dataloader.dehazing_loader("content/drive/MyDrive/PyTorch-Image-Dehazing/data/data",
@@ -38,7 +40,13 @@ def train(config):
  
 	train_loader = torch.utils.data.DataLoader("content/drive/MyDrive/PyTorch-Image-Dehazing/data/data", batch_size=config.train_batch_size, shuffle=True, num_workers=config.num_workers, pin_memory=True)
 	val_loader = torch.utils.data.DataLoader("content/drive/MyDrive/PyTorch-Image-Dehazing/data/images", batch_size=config.val_batch_size, shuffle=True, num_workers=config.num_workers, pin_memory=True)
+	
+	
+	
 	print(len(train_loader))
+	
+	
+	##-----CHANGES STOP------------
 	criterion = nn.MSELoss().cuda()
 	optimizer = torch.optim.Adam(dehaze_net.parameters(), lr=config.lr, weight_decay=config.weight_decay)
 	
