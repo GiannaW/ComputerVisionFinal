@@ -21,4 +21,4 @@ PATH SELECTION data/images
 
 Code thats has been edited is seen within the Train.py file. Along with some sythezied images 
 
-Enjoy and have a nice breal :)
+Enjoy and have a nice break :)
