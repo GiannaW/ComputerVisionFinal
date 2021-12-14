@@ -1,31 +1,24 @@
-# PyTorch-Image-Dehazing
-PyTorch implementation of some single image dehazing networks. 
+# Gianna Williams Computer Vision Project
+Using PyTorch for a simple CNN dehazing networks. 
 
 Currently Implemented:
-**AOD-Net**: An extremely lightweight model (< 10 KB). Results are good.
+**AOD-Net**: An extremely lightweight CNN MODEL 
 
 
-**Prerequisites:**
-1. Python 3 
-2. Pytorch 0.4
+**Languages Used:**
+1. Pytorch 0.4
+2. Python 3 
+ 
 
 **Preparation:**
-1. Create folder "data".
-2. Download and extract the dataset into "data" from the original author's project page. (https://sites.google.com/site/boyilics/website-builder/project-page). 
-
+NONE SIMPLE RUN THIS USING THE DATA FILE PROVIDED. 
+MIGHT NEED TO CHANGE THE PATHS TO SEE THE NETWORK RUN PROPERLY 
+PATH SELECTION data/images
 **Training:**
-1. Run train.py. The script will automatically dump some validation results into the "samples" folder after every epoch. The model snapshots are dumped in the "snapshots" folder. 
-
+1. Run train.py. --> Will drop some validation results into the "samples" folder after every epoch. 
 **Testing:**
-1. Run dehaze.py. The script takes images in the "test_images" folder and dumps the dehazed images into the "results" folder. A pre-trained snapshot has been provided in the snapshots folder.
+1. Run dehaze.py.  ---> The script takes images in the "test_images" folder (data folder) and drops the dehazed images into the "results" folder.
 
-**Evaluation:**
-WIP.  
-Some qualitative results are shown below:
+Code thats has been edited is seen within the Train.py file. Along with some sythezied images 
 
-![Alt text](results/man.png?raw=true "Title")  
-![Alt text](results/guogong.png?raw=true "Title")  
-![Alt text](results/test4.jpg?raw=true "Title")  
-![Alt text](results/test9.jpg?raw=true "Title")  
-![Alt text](results/test13.jpg?raw=true "Title")  
-![Alt text](results/test15.jpg?raw=true "Title")
+Enjoy and have a nice breal :)
