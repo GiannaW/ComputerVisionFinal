@@ -1,119 +1,104 @@
-import torch
-import torch.nn as nn
-import torchvision
-import torch.backends.cudnn as cudnn
-import torch.optim
 import os
 import sys
-import argparse
-import time
-import dataloader
-import net
+
+import torch
+import torch.utils.data as data
+
 import numpy as np
-from torchvision import transforms
+from PIL import Image
+import glob
+import random
+import cv2
+
+random.seed(1143)
 
 
-def weights_init(m):
-    classname = m.__class__.__name__
-    if classname.find('Conv') != -1:
-        m.weight.data.normal_(0.0, 0.02)
-    elif classname.find('BatchNorm') != -1:
-        m.weight.data.normal_(1.0, 0.02)
-        m.bias.data.fill_(0)
+def populate_train_list(orig_images_path, hazy_images_path):
 
 
-def train(config):
-
-	dehaze_net = net.dehaze_net().cuda()
-	dehaze_net.apply(weights_init)
-
-	train_dataset = dataloader.dehazing_loader(config.orig_images_path,
-											 config.hazy_images_path)		
-	val_dataset = dataloader.dehazing_loader(config.orig_images_path,
-											 config.hazy_images_path, mode="val")		
-	train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config.train_batch_size, shuffle=True, num_workers=config.num_workers, pin_memory=True)
-	val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=config.val_batch_size, shuffle=True, num_workers=config.num_workers, pin_memory=True)
-
-	criterion = nn.MSELoss().cuda()
-	optimizer = torch.optim.Adam(dehaze_net.parameters(), lr=config.lr, weight_decay=config.weight_decay)
+	train_list = []
+	val_list = []
 	
-	dehaze_net.train()
+	image_list_haze = glob.glob(hazy_images_path + "*.jpg")
 
-	for epoch in range(config.num_epochs):
-		for iteration, (img_orig, img_haze) in enumerate(train_loader):
+	tmp_dict = {}
 
-			img_orig = img_orig.cuda()
-			img_haze = img_haze.cuda()
-
-			clean_image = dehaze_net(img_haze)
-
-			loss = criterion(clean_image, img_orig)
-
-			optimizer.zero_grad()
-			loss.backward()
-			torch.nn.utils.clip_grad_norm(dehaze_net.parameters(),config.grad_clip_norm)
-			optimizer.step()
-
-			if ((iteration+1) % config.display_iter) == 0:
-				print("Loss at iteration", iteration+1, ":", loss.item())
-			if ((iteration+1) % config.snapshot_iter) == 0:
-				
-				torch.save(dehaze_net.state_dict(), config.snapshots_folder + "Epoch" + str(epoch) + '.pth') 		
-
-		# Validation Stage
-		for iter_val, (img_orig, img_haze) in enumerate(val_loader):
-
-			img_orig = img_orig.cuda()
-			img_haze = img_haze.cuda()
-
-			clean_image = dehaze_net(img_haze)
-
-			torchvision.utils.save_image(torch.cat((img_haze, clean_image, img_orig),0), config.sample_output_folder+str(iter_val+1)+".jpg")
-
-		torch.save(dehaze_net.state_dict(), config.snapshots_folder + "dehazer.pth") 
-
-			
+	for image in image_list_haze:
+		image = image.split("/")[-1]
+		key = image.split("_")[0] + "_" + image.split("_")[1] + ".jpg"
+		if key in tmp_dict.keys():
+			tmp_dict[key].append(image)
+		else:
+			tmp_dict[key] = []
+			tmp_dict[key].append(image)
 
 
+	train_keys = []
+	val_keys = []
 
+	len_keys = len(tmp_dict.keys())
+	for i in range(len_keys):
+		if i < len_keys*9/10:
+			train_keys.append(list(tmp_dict.keys())[i])
+		else:
+			val_keys.append(list(tmp_dict.keys())[i])
+
+
+	for key in list(tmp_dict.keys()):
+
+		if key in train_keys:
+			for hazy_image in tmp_dict[key]:
+
+				train_list.append([orig_images_path + key, hazy_images_path + hazy_image])
+
+
+		else:
+			for hazy_image in tmp_dict[key]:
+
+				val_list.append([orig_images_path + key, hazy_images_path + hazy_image])
 
 
 
+	random.shuffle(train_list)
+	random.shuffle(val_list)
 
-
-if __name__ == "__main__":
-
-	parser = argparse.ArgumentParser()
-
-	# Input Parameters
-	parser.add_argument('--orig_images_path', type=str, default="data/images/")
-	parser.add_argument('--hazy_images_path', type=str, default="data/data/")
-	parser.add_argument('--lr', type=float, default=0.0001)
-	parser.add_argument('--weight_decay', type=float, default=0.0001)
-	parser.add_argument('--grad_clip_norm', type=float, default=0.1)
-	parser.add_argument('--num_epochs', type=int, default=10)
-	parser.add_argument('--train_batch_size', type=int, default=8)
-	parser.add_argument('--val_batch_size', type=int, default=8)
-	parser.add_argument('--num_workers', type=int, default=4)
-	parser.add_argument('--display_iter', type=int, default=10)
-	parser.add_argument('--snapshot_iter', type=int, default=200)
-	parser.add_argument('--snapshots_folder', type=str, default="snapshots/")
-	parser.add_argument('--sample_output_folder', type=str, default="samples/")
-
-	config = parser.parse_args()
-
-	if not os.path.exists(config.snapshots_folder):
-		os.mkdir(config.snapshots_folder)
-	if not os.path.exists(config.sample_output_folder):
-		os.mkdir(config.sample_output_folder)
-
-	train(config)
-
-
-
-
-
-
-
+	return train_list, val_list
 
 	
+
+class dehazing_loader(data.Dataset):
+
+	def __init__(self, orig_images_path, hazy_images_path, mode='train'):
+
+		self.train_list, self.val_list = populate_train_list(orig_images_path, hazy_images_path) 
+
+		if mode == 'train':
+			self.data_list = self.train_list
+			print("Total training examples:", len(self.train_list))
+		else:
+			self.data_list = self.val_list
+			print("Total validation examples:", len(self.val_list))
+
+		
+
+	def __getitem__(self, index):
+
+		data_orig_path, data_hazy_path = self.data_list[index]
+
+		data_orig = Image.open(data_orig_path)
+		data_hazy = Image.open(data_hazy_path)
+
+		data_orig = data_orig.resize((480,640), Image.ANTIALIAS)
+		data_hazy = data_hazy.resize((480,640), Image.ANTIALIAS)
+
+		data_orig = (np.asarray(data_orig)/255.0) 
+		data_hazy = (np.asarray(data_hazy)/255.0) 
+
+		data_orig = torch.from_numpy(data_orig).float()
+		data_hazy = torch.from_numpy(data_hazy).float()
+
+		return data_orig.permute(2,0,1), data_hazy.permute(2,0,1)
+
+	def __len__(self):
+		return len(self.data_list)
+
